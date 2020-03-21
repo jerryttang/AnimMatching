@@ -1,0 +1,17 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{59F03517-48E4-06D7-595F-F195DA9330D3}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "AnimTest",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"AnimGraph"
+			]
+		}
+	]
+}
