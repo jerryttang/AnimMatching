@@ -35,4 +35,11 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Blend")
 		float BlendOutTime = 0.2f;
+
+
+	UPROPERTY(EditAnywhere, Category = "Layer Blend")
+		FName BoneName;
+
+	UPROPERTY(EditAnywhere, Category = "Layer Blend")
+		float BlendDepth;
 };

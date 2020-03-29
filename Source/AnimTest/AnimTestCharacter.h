@@ -60,6 +60,18 @@ protected:
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
+	void ToggleProne();
+
+	void ToggleCrouch();
+
+	void BeginFire();
+
+	void EndFire();
+
+	void BeginAim();
+
+	void EndAim();
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -84,5 +96,16 @@ public:
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<UCharacterAnimationComponent> AnimComponentClass;
 
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsProne;
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsCrouch;
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsAiming;
+
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsFiring;
 };
 

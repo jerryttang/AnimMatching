@@ -10,6 +10,7 @@
 #include "Animation/AnimInstanceProxy.h"
 #include "AnimNode_AnimMatching.generated.h"
 
+class UCharacterAnimationComponent;
 
 /*Currently This is where the process gets done, Both Finding the best Candidate Motion Key and Blending the Animations together along with their Root Motion*/
 USTRUCT(BlueprintInternalUseOnly)
@@ -29,6 +30,7 @@ public:
 	virtual void CacheBones_AnyThread(const FAnimationCacheBonesContext& Context) override; ////-Unused
 	virtual void UpdateAssetPlayer(const FAnimationUpdateContext& Context) override;
 	virtual void Evaluate_AnyThread(FPoseContext& Output) override;
+	void EvaluateLayeredAnimation_AnyThread(UCharacterAnimationComponent* AnimComp, FPoseContext & Output);
 	virtual void OverrideAsset(UAnimationAsset* NewAsset) override; ////-Unused 
 	virtual void GatherDebugData(FNodeDebugData& DebugData) override;
 	// End of FAnimNode_Base interface
@@ -38,4 +40,7 @@ public:
 protected:
 	UPROPERTY()
 		ACharacter* Character;
+
+	TArray<FPerBoneBlendWeight> DesiredBoneBlendWeights;
+	TArray<FPerBoneBlendWeight> CurrentBoneBlendWeights;
 };

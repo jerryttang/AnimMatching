@@ -17,8 +17,12 @@ public:
 	static bool IsStanding(ACharacter* Character);
 	static bool IsCrouching(ACharacter* Character);
 	static bool IsInAir(ACharacter* Character);
+	static bool IsProne(ACharacter* Character);
 	static FGameplayTag GetAnimPoseTag(ACharacter* Character);
 	static FVector GetVelocity(ACharacter* Character);
 	static FRotator GetCharacterRotation(ACharacter* Character);
 	static FRotator GetViewRotation(ACharacter* Character);
+
+	static bool IsFiring(ACharacter* Character);
+	static bool IsAiming(ACharacter* Character);
 };

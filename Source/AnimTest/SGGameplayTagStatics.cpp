@@ -15,6 +15,21 @@ bool USGGameplayTagStatics::IsInAirTag(const FGameplayTag& InTag)
 	return InTag.MatchesTag(PoseTag_InAir);
 }
 
+bool USGGameplayTagStatics::IsStandTag(const FGameplayTag& InTag)
+{
+	return InTag.MatchesTag(PoseTag_Stand);
+}
+
+bool USGGameplayTagStatics::IsCrouchTag(const FGameplayTag& InTag)
+{
+	return InTag.MatchesTag(PoseTag_Crouch);
+}
+
+bool USGGameplayTagStatics::IsProneTag(const FGameplayTag& InTag)
+{
+	return InTag.MatchesTag(PoseTag_Prone);
+}
+
 bool USGGameplayTagStatics::HasTransitionTag(const FGameplayTagContainer& TagContainer)
 {
 	return TagContainer.HasTag(TransitionTag);

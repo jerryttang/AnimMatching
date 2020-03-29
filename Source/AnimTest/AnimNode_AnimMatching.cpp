@@ -53,10 +53,88 @@ void FAnimNode_AnimMatching::Evaluate_AnyThread(FPoseContext & Output)
 			}
 			else
 			{
-				AnimComp->ChoosenAnimSeq->GetAnimationPose(Output.Pose, Output.Curve, FAnimExtractContext(AnimComp->AnimTime, false));
+				if (AnimComp->ChoosenAnimSeq)
+				{
+					AnimComp->ChoosenAnimSeq->GetAnimationPose(Output.Pose, Output.Curve, FAnimExtractContext(AnimComp->AnimTime, false));
+				}
+			}
+
+			// test if should blend layer animation
+			if (AnimComp->TestShouldBlendLayeredAnimation())
+			{
+				EvaluateLayeredAnimation_AnyThread(AnimComp, Output);
 			}
 		}
 	}
+}
+
+void FAnimNode_AnimMatching::EvaluateLayeredAnimation_AnyThread(UCharacterAnimationComponent* AnimComp, FPoseContext & Output)
+{
+	if (!IsValid(AnimComp))
+	{
+		return;
+	}
+
+	FPoseToLayerBlend& LayeredAnimSeq = AnimComp->ChoosenLayeredAnimSeqInfo;
+	if (LayeredAnimSeq.bShouldStopBlend || AnimComp->ChoosenLayeredAnimSeqInfo.BoneBlendWeights.Num() <= 0)
+	{
+		return;
+	}
+
+	FBoneContainer& RequiredBones = Output.AnimInstanceProxy->GetRequiredBones();
+
+	USkeleton* Skeleton = Output.AnimInstanceProxy->GetSkeleton();
+
+	// build desired bone weights
+	const TArray<FBoneIndexType>& RequiredBoneIndices = RequiredBones.GetBoneIndicesArray();
+	const int32 NumRequiredBones = RequiredBoneIndices.Num();
+	DesiredBoneBlendWeights.SetNumZeroed(NumRequiredBones);
+	for (int32 RequiredBoneIndex = 0; RequiredBoneIndex < NumRequiredBones; RequiredBoneIndex++)
+	{
+		const int32 SkeletonBoneIndex = RequiredBones.GetSkeletonIndex(FCompactPoseBoneIndex(RequiredBoneIndex));
+		if (ensure(SkeletonBoneIndex != INDEX_NONE))
+		{
+			DesiredBoneBlendWeights[RequiredBoneIndex] = AnimComp->ChoosenLayeredAnimSeqInfo.BoneBlendWeights[SkeletonBoneIndex];
+		}
+	}
+
+	CurrentBoneBlendWeights.Reset(DesiredBoneBlendWeights.Num());
+	CurrentBoneBlendWeights.AddZeroed(DesiredBoneBlendWeights.Num());
+
+	//Reinitialize bone blend weights now that we have cleared them
+	TArray<float> BlendWeights;
+	BlendWeights.Add(1.f);
+	FAnimationRuntime::UpdateDesiredBoneWeight(DesiredBoneBlendWeights, CurrentBoneBlendWeights, BlendWeights);
+
+
+
+
+	//FPoseContext BasePoseContext(Output);
+
+	int32 NumPoses = 1;
+
+	TArray<FCompactPose> TargetBlendPoses;
+	TargetBlendPoses.SetNum(NumPoses);
+
+	TArray<FBlendedCurve> TargetBlendCurves;
+	TargetBlendCurves.SetNum(NumPoses);
+
+
+	//FPoseContext CurrentPoseContext(Output);
+	TargetBlendPoses[0] = Output.Pose;
+	TargetBlendCurves[0] = Output.Curve;
+
+
+	FCompactPose BasePoseToBlend = Output.Pose;
+	FBlendedCurve BaseCurveToBlend = Output.Curve;
+
+	AnimComp->ChoosenLayeredAnimSeqInfo.BlendAnim->GetAnimationPose(TargetBlendPoses[0], TargetBlendCurves[0], FAnimExtractContext(AnimComp->ChoosenLayeredAnimSeqInfo.CurrentAnimTime, false));
+	
+
+	TEnumAsByte<enum ECurveBlendOption::Type>	CurveBlendOption = ECurveBlendOption::MaxWeight;
+	FAnimationRuntime::EBlendPosesPerBoneFilterFlags BlendFlags = FAnimationRuntime::EBlendPosesPerBoneFilterFlags::None;
+	FAnimationRuntime::BlendPosesPerBoneFilter(BasePoseToBlend, TargetBlendPoses, BaseCurveToBlend, TargetBlendCurves, Output.Pose, Output.Curve, CurrentBoneBlendWeights, BlendFlags, CurveBlendOption);
+	Output.Pose.NormalizeRotations();
 }
 
 void FAnimNode_AnimMatching::OverrideAsset(UAnimationAsset * NewAsset)

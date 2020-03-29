@@ -16,5 +16,8 @@ class ANIMTEST_API USGGameplayTagStatics : public UBlueprintFunctionLibrary
 public:
 	static bool IsOnLandTag(const FGameplayTag& InTag);
 	static bool IsInAirTag(const FGameplayTag& InTag);
+	static bool IsStandTag(const FGameplayTag& InTag);
+	static bool IsCrouchTag(const FGameplayTag& InTag);
+	static bool IsProneTag(const FGameplayTag& InTag);
 	static bool HasTransitionTag(const FGameplayTagContainer& TagContainer);
 };

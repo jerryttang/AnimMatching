@@ -3,21 +3,30 @@
 
 #include "SGCharacterStatics.h"
 #include "GameFramework/Character.h"
+#include "AnimTestCharacter.h"
 
 bool USGCharacterStatics::IsStanding(ACharacter* Character)
 {
 	// default is standing
-	return Character ? !Character->bIsCrouched : true;
+	AAnimTestCharacter *TestCharacter = Cast<AAnimTestCharacter>(Character);
+	return TestCharacter ? !TestCharacter->bIsCrouch && !TestCharacter->bIsProne: true;
 }
 
 bool USGCharacterStatics::IsCrouching(ACharacter* Character)
 {
-	return Character ? Character->bIsCrouched : false;
+	AAnimTestCharacter *TestCharacter = Cast<AAnimTestCharacter>(Character);
+	return TestCharacter ? TestCharacter->bIsCrouch : false;
 }
 
 bool USGCharacterStatics::IsInAir(ACharacter* Character)
 {
 	return Character ? Character->GetCharacterMovement()->IsFalling() : false;
+}
+
+bool USGCharacterStatics::IsProne(ACharacter* Character)
+{
+	AAnimTestCharacter *TestCharacter = Cast<AAnimTestCharacter>(Character);
+	return TestCharacter ? TestCharacter->bIsProne : false;
 }
 
 FGameplayTag USGCharacterStatics::GetAnimPoseTag(ACharacter* Character)
@@ -34,6 +43,10 @@ FGameplayTag USGCharacterStatics::GetAnimPoseTag(ACharacter* Character)
 	else if (IsCrouching(Character))
 	{
 		ResultTag = PoseTag_Crouch;
+	}
+	else if (IsProne(Character))
+	{
+		ResultTag = PoseTag_Prone;
 	}
 	
 	return ResultTag;
@@ -52,5 +65,17 @@ FRotator USGCharacterStatics::GetCharacterRotation(ACharacter* Character)
 FRotator USGCharacterStatics::GetViewRotation(ACharacter* Character)
 {
 	return Character ? Character->GetViewRotation() : FRotator::ZeroRotator;
+}
+
+bool USGCharacterStatics::IsFiring(ACharacter* Character)
+{
+	AAnimTestCharacter *TestCharacter = Cast<AAnimTestCharacter>(Character);
+	return TestCharacter ? TestCharacter->bIsFiring : false;
+}
+
+bool USGCharacterStatics::IsAiming(ACharacter* Character)
+{
+	AAnimTestCharacter *TestCharacter = Cast<AAnimTestCharacter>(Character);
+	return TestCharacter ? TestCharacter->bIsAiming : false;
 }
 

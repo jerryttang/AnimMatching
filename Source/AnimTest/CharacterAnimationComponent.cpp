@@ -8,6 +8,7 @@
 #include "SGCharacterStatics.h"
 #include "AnimTagMetaData.h"
 #include "SGGameplayTagStatics.h"
+#include "SGAnimationStatics.h"
 
 UCharacterAnimationComponent::UCharacterAnimationComponent()
 {
@@ -25,6 +26,7 @@ void UCharacterAnimationComponent::TickComponent(float DeltaTime, enum ELevelTic
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	RefreshBlendPoseList(DeltaTime);
+	TickLayerBlendPoseList(DeltaTime);
 	TickMostRightAnimation(DeltaTime);
 	TickPlayAnimTime(DeltaTime);
 	TickDebugInfo();
@@ -38,6 +40,10 @@ ACharacter* UCharacterAnimationComponent::GetCharacter()
 
 void UCharacterAnimationComponent::TickMostRightAnimation(float DeltaTime)
 {
+	if (!GetCharacter())
+	{
+		return;
+	}
 	// pose : stand/crouch/prone/fall
 	CurrentPoseTag = USGCharacterStatics::GetAnimPoseTag(GetCharacter());
 	
@@ -53,7 +59,8 @@ void UCharacterAnimationComponent::TickMostRightAnimation(float DeltaTime)
 	CharacterRotation = USGCharacterStatics::GetCharacterRotation(GetCharacter());
 
 	// to local dir
-	FRotator DiffRotator = (CharacterRotation - CharacterVeloctiy.ToOrientationRotator()).GetNormalized();
+	FRotator ViewRotation = GetCharacter()->bUseControllerRotationYaw ? USGCharacterStatics::GetVelocity(GetCharacter()).Rotation() : USGCharacterStatics::GetViewRotation(GetCharacter());
+	FRotator DiffRotator = (CharacterRotation - ViewRotation).GetNormalized();
 	VelocityDirDiffAngle_Yaw = DiffRotator.Yaw;
 	VelocityDirDiffAngle_Pitch = DiffRotator.Pitch;
 
@@ -102,6 +109,27 @@ void UCharacterAnimationComponent::TickMostRightAnimation(float DeltaTime)
 	}
 
 	LastPoseTag = CurrentPoseTag;
+
+	int32 LayerAnimIndex = GetMostRightSlotAnim();
+	if (LayeredAnimationSet.IsValidIndex(LayerAnimIndex))
+	{
+		// valid and should blend
+		FName InBoneName;
+		int32 InBlendIndex;
+		USGAnimationStatics::GetLayerBlendAnimInfo(LayeredAnimationSet[LayerAnimIndex].AnimSeq, InBoneName, InBlendIndex);
+		FPoseToLayerBlend NewPoseToBlend(LayeredAnimationSet[LayerAnimIndex].AnimSeq, true, InBoneName, InBlendIndex);		
+		int32 FindIndex = LayerBlendPosesList.Find(NewPoseToBlend);
+		if (LayerBlendPosesList.IsValidIndex(FindIndex))
+		{
+			LayerBlendPosesList[FindIndex].Reset(true);
+			LayerBlendPosesList[FindIndex].CurrentAnimTime = 0;
+		}
+		else
+		{
+			NewPoseToBlend.BuildCacheData(GetCharacter()->GetMesh()->SkeletalMesh->Skeleton);
+			LayerBlendPosesList.Add(NewPoseToBlend);
+		}
+	}
 }
 
 void UCharacterAnimationComponent::OnChoosenAnimChanged(UAnimSequence* OldAnimSeq, UAnimSequence* NewAnimSeq)
@@ -159,6 +187,30 @@ void UCharacterAnimationComponent::OnPoseChanged(FGameplayTag& InLastPose, FGame
 	else if (USGGameplayTagStatics::IsInAirTag(InLastPose) && USGGameplayTagStatics::IsOnLandTag(InCurrentPose))
 	{
 		TransitionTag = TransitionTag_AirToLand;
+	}
+	else if (USGGameplayTagStatics::IsStandTag(InLastPose) && USGGameplayTagStatics::IsCrouchTag(InCurrentPose))
+	{
+		TransitionTag = TransitionTag_StandToCrouch;
+	}
+	else if (USGGameplayTagStatics::IsStandTag(InLastPose) && USGGameplayTagStatics::IsProneTag(InCurrentPose))
+	{
+		TransitionTag = TransitionTag_StandToProne;
+	}
+	else if (USGGameplayTagStatics::IsCrouchTag(InLastPose) && USGGameplayTagStatics::IsStandTag(InCurrentPose))
+	{
+		TransitionTag = TransitionTag_CrouchToStand;
+	}
+	else if (USGGameplayTagStatics::IsCrouchTag(InLastPose) && USGGameplayTagStatics::IsProneTag(InCurrentPose))
+	{
+		TransitionTag = TransitionTag_CrouchToProne;
+	}
+	else if (USGGameplayTagStatics::IsProneTag(InLastPose) && USGGameplayTagStatics::IsStandTag(InCurrentPose))
+	{
+		TransitionTag = TransitionTag_ProneToStand;
+	}
+	else if (USGGameplayTagStatics::IsProneTag(InLastPose) && USGGameplayTagStatics::IsCrouchTag(InCurrentPose))
+	{
+		TransitionTag = TransitionTag_ProneToCrouch;
 	}
 }
 
@@ -253,6 +305,53 @@ int32 UCharacterAnimationComponent::GetAnimCost(UAnimSequence* AnimSeq, FAnimMat
 	return ResultCost;
 }
 
+int32 UCharacterAnimationComponent::GetMostRightSlotAnim()
+{
+	FGameplayTagContainer TagContainer;
+	// get all tags
+	ACharacter* Char = GetCharacter();
+	if (!Char)
+	{
+		return INDEX_NONE;
+	}
+
+	if (USGCharacterStatics::IsAiming(Char))
+	{
+		TagContainer.AddTag(UpperBodyTag_Aim);
+	}
+	 
+	if (USGCharacterStatics::IsFiring(Char))
+	{
+		TagContainer.AddTag(UpperBodyTag_Fire);
+	}
+
+	if (TagContainer.IsValid())
+	{
+		// has layered animation
+		for (int32 Index = 0; Index < LayeredAnimationSet.Num(); ++Index)
+		{
+			UAnimSequence* AnimSeq = LayeredAnimationSet[Index].AnimSeq;
+			if (AnimSeq)
+			{
+				TArray<UAnimMetaData*> MetaDataList = AnimSeq->GetMetaData();
+				if (MetaDataList.Num() > 0)
+				{
+					UAnimTagMetaData* TagMetaData = Cast<UAnimTagMetaData>(MetaDataList[0]);
+					if (TagMetaData)
+					{
+						if (TagContainer.HasAllExact(TagMetaData->TagList))
+						{
+							return Index;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return INDEX_NONE;
+}
+
 
 void UCharacterAnimationComponent::PreProcessAnimationSet()
 {
@@ -269,10 +368,10 @@ void UCharacterAnimationComponent::TickDebugInfo()
 		{
 			DebugString += DebugInfo.ToString();
 		}
-		for (FPoseToBlend& PoseToBlend : BlendPosesList)
+		/*for (FPoseToBlend& PoseToBlend : BlendPosesList)
 		{
 			DebugString += ("\n" + PoseToBlend.ToString());
-		}
+		}*/
 		GEngine->AddOnScreenDebugMessage(0, 5.0f, FColor::Yellow, DebugString);
 	}
 }
@@ -291,6 +390,29 @@ void UCharacterAnimationComponent::RefreshBlendPoseList(float DeltaTime)
 			}
 		}
 	}
+
+	float MinPlayedAnimTime = 10000.f;
+	int32 MinTimeIndex = INDEX_NONE;
+	for (int32 Index = 0; Index < LayerBlendPosesList.Num(); ++Index)
+	{
+		if (!LayerBlendPosesList[Index].bShouldStopBlend)
+		{
+			LayerBlendPosesList[Index].UpdateWeight(DeltaTime);
+			if (LayerBlendPosesList[Index].CurrentAnimTime < MinPlayedAnimTime)
+			{
+				MinTimeIndex = Index;
+				MinPlayedAnimTime = LayerBlendPosesList[Index].CurrentAnimTime;
+			}
+		}
+	}
+	if (MinTimeIndex != INDEX_NONE)
+	{
+		ChoosenLayeredAnimSeqInfo = LayerBlendPosesList[MinTimeIndex];
+	}
+	else
+	{
+		ChoosenLayeredAnimSeqInfo.bShouldStopBlend = true;
+	}
 }
 
 bool UCharacterAnimationComponent::TestShouldBlend()
@@ -303,4 +425,14 @@ bool UCharacterAnimationComponent::TestShouldBlend()
 		}
 	}
 	return false;
+}
+
+void UCharacterAnimationComponent::TickLayerBlendPoseList(float DeltaTime)
+{
+
+}
+
+bool UCharacterAnimationComponent::TestShouldBlendLayeredAnimation()
+{
+	return !ChoosenLayeredAnimSeqInfo.bShouldStopBlend && IsValid(ChoosenLayeredAnimSeqInfo.BlendAnim);
 }

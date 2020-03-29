@@ -55,8 +55,15 @@ void AAnimTestCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 {
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
+
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &AAnimTestCharacter::ToggleCrouch);
+	PlayerInputComponent->BindAction("Prone", IE_Pressed, this, &AAnimTestCharacter::ToggleProne);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AAnimTestCharacter::BeginFire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &AAnimTestCharacter::EndFire);
+	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &AAnimTestCharacter::BeginAim);
+	PlayerInputComponent->BindAction("Aim", IE_Released, this, &AAnimTestCharacter::EndAim);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AAnimTestCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AAnimTestCharacter::MoveRight);
@@ -108,6 +115,52 @@ void AAnimTestCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Loc
 void AAnimTestCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 	StopJumping();
+}
+
+
+void AAnimTestCharacter::ToggleProne()
+{
+	if (bIsProne)
+	{
+		bIsProne = false;
+	}
+	else
+	{
+		bIsProne = true;
+	}
+}
+
+void AAnimTestCharacter::ToggleCrouch()
+{
+	if (bIsCrouch)
+	{
+		bIsCrouch = false;
+	}
+	else
+	{
+		bIsCrouch = true;
+	}
+}
+
+
+void AAnimTestCharacter::BeginFire()
+{
+	bIsFiring = true;
+}
+
+void AAnimTestCharacter::EndFire()
+{
+	bIsFiring = false;
+}
+
+void AAnimTestCharacter::BeginAim()
+{
+	bIsAiming = true;
+}
+
+void AAnimTestCharacter::EndAim()
+{
+	bIsAiming = false;
 }
 
 void AAnimTestCharacter::TurnAtRate(float Rate)

@@ -36,6 +36,8 @@ public:
 
 	int32 GetAnimCost(UAnimSequence* AnimSeq, FAnimMatchDebugInfo& DebugInfo);
 
+	int32 GetMostRightSlotAnim();
+
 	void PreProcessAnimationSet();
 
 	void TickDebugInfo();
@@ -43,6 +45,10 @@ public:
 	void RefreshBlendPoseList(float DeltaTime);
 
 	bool TestShouldBlend();
+
+	void TickLayerBlendPoseList(float DeltaTime);
+
+	bool TestShouldBlendLayeredAnimation();
 
 protected:
 
@@ -52,11 +58,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Asset")
 		TArray<FAnimSetInfo> AnimationSet;
 
+	UPROPERTY(EditAnywhere, Category = "Asset")
+		TArray<FAnimSetInfo> LayeredAnimationSet;
+
 	UPROPERTY(EditAnywhere, Category = "Cost")
 		int32 WrongPoseCost = 1000;
 
 	UPROPERTY(EditAnywhere, Category = "Cost")
-		float VelocitySizeDiffCostScale = 1.f;
+		float VelocitySizeDiffCostScale = 2.f;
 
 	UPROPERTY(EditAnywhere, Category = "Cost")
 		float VelocityDirDiffCostScale_Yaw = 1.f;
@@ -86,7 +95,13 @@ public:
 		UAnimSequence* ChoosenAnimSeq;
 
 	UPROPERTY(BlueprintReadOnly)
+		FPoseToLayerBlend ChoosenLayeredAnimSeqInfo;
+
+	UPROPERTY(BlueprintReadOnly)
 		TArray<FPoseToBlend> BlendPosesList;
+
+	UPROPERTY(BlueprintReadOnly)
+		TArray<FPoseToLayerBlend> LayerBlendPosesList;
 
 	UPROPERTY(BlueprintReadOnly)
 		float AnimTime;
